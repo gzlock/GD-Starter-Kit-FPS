@@ -2,7 +2,7 @@ extends CharacterBody3D
 
 @export_subgroup("Properties")
 @export var movement_speed = 5
-@export_range(0, 100) var number_of_jumps:int = 2
+@export_range(0, 100) var number_of_jumps: int = 2
 @export var jump_strength = 8
 
 @export_subgroup("Weapons")
@@ -21,16 +21,16 @@ var rotation_target: Vector3
 
 var input_mouse: Vector2
 
-var health:int = 100
+var health: int = 100
 var gravity := 0.0
 
 var previously_floored := false
 
-var jumps_remaining:int
+var jumps_remaining: int
 
 var container_offset = Vector3(1.2, -1.1, -2.75)
 
-var tween:Tween
+var tween: Tween
 
 signal health_updated
 
@@ -41,21 +41,18 @@ signal health_updated
 @onready var sound_footsteps = $SoundFootsteps
 @onready var blaster_cooldown = $Cooldown
 
-@export var crosshair:TextureRect
+@export var crosshair: TextureRect
 
 # Functions
 
 func _ready():
-	
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	
 	weapon = weapons[weapon_index] # Weapon must never be nil
 	initiate_change_weapon(weapon_index)
 
 func _process(delta):
-	
 	# Handle functions
-	
 	handle_controls(delta)
 	handle_gravity(delta)
 	
@@ -66,7 +63,7 @@ func _process(delta):
 	movement_velocity = transform.basis * movement_velocity # Move forward
 	
 	applied_velocity = velocity.lerp(movement_velocity, delta * 10)
-	applied_velocity.y = -gravity
+	applied_velocity.y = - gravity
 	
 	velocity = applied_velocity
 	move_and_slide()
@@ -105,9 +102,7 @@ func _input(event):
 		handle_rotation(event.relative.x, event.relative.y, false)
 
 func handle_controls(delta):
-	
 	# Mouse capture
-	
 	if Input.is_action_just_pressed("mouse_capture"):
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		mouse_captured = true
@@ -134,7 +129,6 @@ func handle_controls(delta):
 	# Jumping
 	
 	if Input.is_action_just_pressed("jump"):
-		
 		if jumps_remaining:
 			action_jump()
 		
@@ -162,23 +156,20 @@ func handle_gravity(delta):
 	gravity += 20 * delta
 	
 	if gravity > 0 and is_on_floor():
-		
 		jumps_remaining = number_of_jumps
 		gravity = 0
 
 # Jumping
 
-func action_jump():	
+func action_jump():
 	Audio.play("sounds/jump_a.ogg, sounds/jump_b.ogg, sounds/jump_c.ogg")
-	gravity = -jump_strength	
+	gravity = - jump_strength
 	jumps_remaining -= 1
 
 # Shooting
 
 func action_shoot():
-	
 	if Input.is_action_pressed("shoot"):
-	
 		if !blaster_cooldown.is_stopped(): return # Cooldown for shooting
 		
 		Audio.play(weapon.sound_shoot)
@@ -196,7 +187,6 @@ func action_shoot():
 		# Shoot the weapon, amount based on shot count
 		
 		for n in weapon.shot_count:
-		
 			raycast.target_position.x = randf_range(-weapon.spread, weapon.spread)
 			raycast.target_position.y = randf_range(-weapon.spread, weapon.spread)
 			
@@ -223,16 +213,19 @@ func action_shoot():
 			impact_instance.position = raycast.get_collision_point() + (raycast.get_collision_normal() / 10)
 			impact_instance.look_at(camera.global_transform.origin, Vector3.UP, true)
 			
+		var knockback = random_vec2(weapon.min_knockback, weapon.max_knockback)
+		# print('knockback', knockback)
 		container.position.z += 0.25 # Knockback of weapon visual
-		camera.rotation.x += 0.025 # Knockback of camera
+		camera.rotation.x += knockback.x # Knockback of camera
+		rotation.y += knockback.y
+		rotation_target.x += knockback.x
+		rotation_target.y += knockback.y
 		movement_velocity += Vector3(0, 0, weapon.knockback) # Knockback
 
 # Toggle between available weapons (listed in 'weapons')
 
 func action_weapon_toggle():
-	
 	if Input.is_action_just_pressed("weapon_toggle"):
-		
 		weapon_index = wrap(weapon_index + 1, 0, weapons.size())
 		initiate_change_weapon(weapon_index)
 		
@@ -241,7 +234,6 @@ func action_weapon_toggle():
 # Initiates the weapon changing animation (tween)
 
 func initiate_change_weapon(index):
-	
 	weapon_index = index
 	
 	tween = get_tree().create_tween()
@@ -252,7 +244,6 @@ func initiate_change_weapon(index):
 # Switches the weapon model (off-screen)
 
 func change_weapon():
-	
 	weapon = weapons[weapon_index]
 
 	# Step 1. Remove previous weapon model(s) from container
@@ -279,9 +270,13 @@ func change_weapon():
 	crosshair.texture = weapon.crosshair
 
 func damage(amount):
-	
 	health -= amount
 	health_updated.emit(health) # Update health on HUD
 	
 	if health < 0:
 		get_tree().reload_current_scene() # Reset when out of health
+
+# Create a random knockback vector
+static func random_vec2(_min: Vector2, _max: Vector2) -> Vector2:
+	var _sign = -1 if randi() % 2 == 0 else 1
+	return Vector2(randf_range(_min.x, _max.x), randf_range(_min.y, _max.y) * _sign)
