@@ -13,5 +13,7 @@ cooldown = 0.25
 spread = 1.0
 shot_count = 3
 knockback = 40
+min_knockback = Vector2(0.025, 0.025)
+max_knockback = Vector2(0.045, 0.04)
 sound_shoot = "sounds/blaster.ogg"
 crosshair = ExtResource("1_2onsr")
